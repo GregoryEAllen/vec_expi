@@ -1,4 +1,4 @@
-//  vec_expi.hh version 1.0
+//  vec_expi.hh version 1.1
 /*
  *  Copyright (c) 2017 Gregory E. Allen
  *  
@@ -99,17 +99,30 @@ inline void vec_expi_sse2(const float* in, std::complex<float>* out, unsigned co
         _mm_storeu_ps((float*)(out+i), vlo);
         _mm_storeu_ps((float*)(out+i+2), vhi);
     }
-    vin = _mm_loadu_ps(in+count);
+    if (!rem) return;
+    in += count;
     out += count;
-    mm_expi_ps(vin, &vlo, &vhi);
-    if (rem&2) {
-        _mm_storeu_ps((float*)(out), vlo);
-        out += 2;
-        vlo = vhi;
-    }
-    if (rem&1) {
-        _mm_store_ss((float*)out, _mm_shuffle_ps(vlo, vlo, _MM_SHUFFLE2(0,0)));
-        _mm_store_ss((float*)out+1, _mm_shuffle_ps(vlo, vlo, _MM_SHUFFLE2(0,1)));
+    switch (rem) {
+        case 1:
+            vin = _mm_load_ss(in);
+            mm_expi_ps(vin, &vlo, &vhi);
+            _mm_store_sd((double*)out, _mm_castps_pd(vlo));
+            break;
+        case 2:
+            vin = _mm_castpd_ps(_mm_load_sd((const double*)in));
+            mm_expi_ps(vin, &vlo, &vhi);
+            _mm_storeu_ps((float*)out, vlo);
+            break;
+        case 3:
+            vlo = _mm_castpd_ps(_mm_load_sd((const double*)in));
+            vhi = _mm_load_ss(in+2);
+            vin = _mm_movelh_ps(vlo, vhi);
+            mm_expi_ps(vin, &vlo, &vhi);
+            _mm_storeu_ps((float*)out, vlo);
+            _mm_store_sd((double*)out+2, _mm_castps_pd(vhi));
+            break;
+        default:
+            break;
     }
 }
 #endif
@@ -128,6 +141,7 @@ inline void vec_expi_avx(const float* in, std::complex<float>* out, unsigned cou
         _mm256_storeu_ps((float*)(out+i), vlo);
         _mm256_storeu_ps((float*)(out+i+4), vhi);
     }
+    if (!rem) return;
     in += count;
     out += count;
     vec_expi_sse2(in, out, rem);
