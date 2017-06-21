@@ -14,7 +14,6 @@ add_test(test_vec_expi-avx test_vec_expi-avx)
 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-mavx2" HAVE_AVX2)
-message(STATUS ${HAVE_AVX2})
 
 if(${HAVE_AVX2})
     add_executable(test_vec_expi-avx2 test_vec_expi.cc)
